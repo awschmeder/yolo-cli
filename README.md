@@ -1,4 +1,7 @@
-# YOLO (Pre-Flight Shell Command Helper)
+# YOLO (Pre-flight Command Checker)
+
+![yolo](yolo.png)
+
 
 `yolo` is a lightweight Go tool for Bash and Zsh that routes each shell command through an
 OpenAI-compatible LLM endpoint for a pre-flight approve/deny check, replacing the need for static
