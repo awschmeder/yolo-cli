@@ -39,9 +39,10 @@ yolo -c 'ssh mybox rm -rf /tmp/old-data'
 yolo -c 'mkdir -p ./out; cp build/* ./out/'
 ```
 
-#### Heredoc Form (for commands with complex quoting)
+#### Heredoc Form (preferred for long or multi-line commands)
 
-When the command itself contains single quotes, use a heredoc to avoid quoting conflicts:
+Use the heredoc form whenever the command is long, spans multiple lines, or contains single
+quotes. It is more readable and avoids quoting conflicts:
 
 ```bash
 yolo -c "$(cat <<'EOF'
@@ -49,6 +50,11 @@ find /tmp -name '*.log' -mtime +7 | xargs rm -f
 EOF
 )"
 ```
+
+Prefer heredoc over inline `-c '...'` when:
+- The command is longer than ~80 characters
+- The command spans multiple lines (e.g., chained `&&` steps)
+- The command contains single quotes that would require escaping
 
 The heredoc form is the most reliable option when the command contains a mix of single and
 double quotes that would otherwise require complex escaping.
@@ -84,16 +90,31 @@ When this happens:
 4. **If the user declines** -- do not execute the command. Abandon the step or propose an
    alternative approach.
 
-The bypass hash is derived from the exact command string. If the command is modified between
-approval and re-execution, the old code no longer matches and `yolo` prints a new one, requiring
-a fresh round of user approval. The resubmitted command must match exactly.
+### Hash Binding and Command Integrity
+
+The bypass hash is computed from the **exact command string** that was blocked. This means:
+
+- The hash for `cat files.txt | xargs rm -f` differs from `cat files.txt | xargs rm -rf`.
+- If you modify the command after receiving a bypass code, the old code is invalid.
+- `yolo` will detect the mismatch and print a new hash for the modified command:
+  ```
+  ERROR: Invalid or mismatched YOLO hash code. If you have modified the command, the old code
+  is expired. Use an elicitation tool to prompt the user for their approval of this modified
+  command, and if they confirm then re-execute the command using: yolo -x df21ab -c '<new_cmd>'
+  ```
+- A modified command requires a fresh round of user approval before using the new hash.
 
 ## Rules
 
 - **Always use `yolo -c`** -- pass every command through `yolo -c '...'` before execution,
-  regardless of how safe the command appears.
+  regardless of how safe the command appears. This includes read-only commands such as
+  `find`, `ls`, `cat`, `grep`, `git status`, `git log`, `git diff`, and any other CLI tool.
+  There are no exceptions based on command type or perceived safety.
 - **Do not run the command separately** -- when using `-c`, `yolo` executes the command itself
   after approval. Running it again outside of `yolo` bypasses the safety check.
+- **Prefer heredoc for long or multi-line commands** -- when a command exceeds ~80 characters
+  or spans multiple lines, use the heredoc form (`yolo -c "$(cat <<'EOF' ... EOF)"`) instead
+  of inline `-c '...'`. This improves readability and avoids quoting errors.
 - **Always use `-c` for compound expressions** -- any command containing `|`, `&&`, `||`, `;`,
   `>`, `<`, or backticks must use the `-c` flag. Without it, the shell parses those operators
   before `yolo` runs, bypassing the safety check entirely.
@@ -109,6 +130,6 @@ a fresh round of user approval. The resubmitted command must match exactly.
 - **Do not split compound commands to avoid review** -- breaking `cmd1 && cmd2` into two
   separate `yolo -c` calls to make each look simpler is not acceptable. Submit the full intended
   expression as a single invocation so the combined effect is evaluated.
-
 ---
+
 
