@@ -1,0 +1,41 @@
+# Compiled binary (built from main.go; module name: yolo)
+/yolo
+yolo.exe
+
+# Other Go build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage output
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency vendor directory (uncomment if not vendoring)
+# vendor/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS system files
+.DS_Store
+
+# Local scratch and planning notes
+scratch/
+todo/
+plans/
+TODO.txt
+tmp/
+
+# Intentional malicious-skill test fixture; not for public distribution yet
+SAMPLE-TOXIC-SKILL.md
