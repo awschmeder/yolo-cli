@@ -137,11 +137,8 @@ yolo -c 'rm -rf ./dist'
 yolo -c 'git add . && git commit -m "fix: update config"'
 yolo -c 'cat files.txt | xargs rm -f'
 
-# Heredoc form for commands containing single quotes
-yolo -c "$(cat <<'EOF'
-find /tmp -name '*.log' -mtime +7 | xargs rm -f
-EOF
-)"
+# Multi-line or complex commands: collapse onto one line with \n, never use heredoc
+yolo -c 'find /tmp -name "*.log" -mtime +7\n| xargs rm -f'
 ```
 
 ### Bypass Codes (`-x`)
