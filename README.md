@@ -1,6 +1,6 @@
 # YOLO (Pre-flight Command Checker)
 
-![yolo](yolo.png)
+![yolo](assets/yolo-animated.gif)
 
 
 `yolo` is a lightweight Go tool for Bash and Zsh that routes each shell command through an
@@ -33,18 +33,7 @@ sandboxing, least-privilege accounts, and OS-level controls for those needs.
    ./install-cborg.sh    # LBNL CBORG users (built-in default endpoint)
    ./install-openai.sh   # OpenAI users
    ```
-3. Optional (interactive terminal use only -- agents calling `yolo -c` do not need this): source
-   the setup hook from your shell profile:
-   ```bash
-   # ~/.bashrc or ~/.bash_profile
-   source "$HOME/.yolo/shell/yolo-setup.bash"
-
-   # ~/.zshrc
-   source "$HOME/.yolo/shell/yolo-setup.zsh"
-   ```
-
-The hook only activates when a trigger variable is set (see [Activation](#activation)), so normal
-developer sessions are unaffected.
+Agents route commands through `yolo -c '<command>'`, so no shell profile changes are required.
 
 ---
 
@@ -66,40 +55,13 @@ commands the policy flags. For all projects, paste into your global agent rules 
 
 ---
 
-## Interactive Terminal Activation (Optional)
-
-Installed by sourcing the shell integration (zsh or bash).
-
-### Activation
-
-The hook runs only when at least one variable named in `YOLO_ENVS` is non-empty; otherwise
-commands pass through with no overhead. Defaults: `YOLO_TEST`, `ROO_ACTIVE`, `ZOO_ACTIVE`,
-`CLAUDE_CODE`, `OPENCODE`. To activate for a custom context:
-
-```bash
-export YOLO_ENVS=MY_AGENT_VAR,ANOTHER_AGENT_VAR
-```
-
-Interactively typed commands are captured via native hooks (`DEBUG` traps in Bash, a custom
-`accept-line` widget in Zsh).
-
-`yolo` mode can be activated manually:
-
-```bash
-yolo_activate    # enable YOLO_INTERACTIVE=1, prefix prompt with [yolo]
-yolo_deactivate  # disable it and restore the prompt
-```
-
-Use with YOLO_INTERACTIVE=1 to elicit y/N approval from /dev/tty. This mode is primarily for testing but also works with the ZooCode VSCode Extension when terminal integration is disabled (VSCode terminal injection).
-
-
 ## CLI Flags
 
 ```
 yolo [flags] [command...]
 
-  -c <expr>     Check and execute a command expression. Preferred for all agent use,
-                compound commands (pipes, chains, redirects), and heredocs.
+  -c <expr>     Check and execute a command expression. Preferred for all agent use and
+                compound commands (pipes, chains, redirects, heredocs).
   -x <hash>     6-char hex bypass code to authorize a previously blocked command.
   -s <file>     Scan a skill/agent definition file for embedded malicious instructions.
   --paranoid    Allow only strictly read-only commands. Shorthand: -p
@@ -137,8 +99,8 @@ yolo -c 'rm -rf ./dist'
 yolo -c 'git add . && git commit -m "fix: update config"'
 yolo -c 'cat files.txt | xargs rm -f'
 
-# Multi-line or complex commands: collapse onto one line with \n, never use heredoc
-yolo -c 'find /tmp -name "*.log" -mtime +7\n| xargs rm -f'
+# Multi-line commands work directly; pass them as a single quoted string
+yolo -c 'find /tmp -name "*.log" -mtime +7 | xargs rm -f'
 ```
 
 ### Bypass Codes (`-x`)
@@ -194,4 +156,44 @@ yolo --dry-run -c 'rm -rf /'
 # stderr: [YOLO DRY-RUN] ALLOW: rm -rf /   (or BLOCK)
 # exit: 0
 ```
+
+---
+
+## Interactive Terminal Activation (Experimental)
+
+> **Experimental feature -- not recommended.** The interactive shell hooks are experimental and
+> intended only for manual terminal testing. Agents route commands through `yolo -c '<command>'`
+> and do not need this. Most users should skip it.
+
+Installed by sourcing the shell integration (zsh or bash) from your shell profile:
+
+```bash
+# ~/.bashrc or ~/.bash_profile
+source "$HOME/.yolo/shell/yolo-setup.bash"
+
+# ~/.zshrc
+source "$HOME/.yolo/shell/yolo-setup.zsh"
+```
+
+### Activation
+
+The hook runs only when at least one variable named in `YOLO_ENVS` is non-empty; otherwise
+commands pass through with no overhead. Defaults: `YOLO_TEST`, `ROO_ACTIVE`, `ZOO_ACTIVE`,
+`CLAUDE_CODE`, `OPENCODE`. To activate for a custom context:
+
+```bash
+export YOLO_ENVS=MY_AGENT_VAR,ANOTHER_AGENT_VAR
+```
+
+Interactively typed commands are captured via native hooks (`DEBUG` traps in Bash, a custom
+`accept-line` widget in Zsh).
+
+`yolo` mode can be activated manually:
+
+```bash
+yolo_activate    # enable YOLO_INTERACTIVE=1, prefix prompt with [yolo]
+yolo_deactivate  # disable it and restore the prompt
+```
+
+Use with YOLO_INTERACTIVE=1 to elicit y/N approval from /dev/tty. This mode is primarily for testing but also works with the ZooCode VSCode Extension when terminal integration is disabled (VSCode terminal injection).
 

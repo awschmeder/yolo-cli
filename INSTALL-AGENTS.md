@@ -39,26 +39,6 @@ yolo -c 'ssh mybox rm -rf /tmp/old-data'
 yolo -c 'mkdir -p ./out; cp build/* ./out/'
 ```
 
-#### Multi-line or Complex Commands
-
-Do not use heredoc form (`$(cat <<'EOF' ... EOF)`). Tool parsers that match on `yolo -c` as
-the command prefix are confused by multi-line strings and heredoc syntax.
-
-Instead, collapse the command onto a single line using `\n` as the line separator within the
-single-quoted string:
-
-```bash
-yolo -c 'line one\nline two\nline three'
-```
-
-For SSH remote commands with inner double quotes, escape them as `\"` inside the single-quoted
-string is not possible -- use `\n`-separated lines and avoid inner double quotes by using
-single quotes on the remote side where the shell allows it, or restructure the remote command
-to avoid quoting conflicts.
-
-Prefer `\n`-joined single-line form over heredoc whenever the command spans multiple logical
-steps, since heredoc requires multi-line input that tool parsers cannot handle.
-
 ### What Happens When a Command Is Blocked
 
 If `yolo` blocks a command, it exits with code `1` and prints a message like:
@@ -79,10 +59,6 @@ When this happens:
    error message. `yolo` will verify the hash and execute the command if it matches:
    ```bash
    yolo -x 3fa8b1 -c 'ssh mybox rm -rf /tmp/old-data'
-   ```
-   For multi-line commands, collapse with `\n`:
-   ```bash
-   yolo -x 3fa8b1 -c 'find /tmp -name "*.log" -mtime +7\n| xargs rm -f'
    ```
 4. **If the user declines** -- do not execute the command. Abandon the step or propose an
    alternative approach.
@@ -109,10 +85,6 @@ The bypass hash is computed from the **exact command string** that was blocked. 
   There are no exceptions based on command type or perceived safety.
 - **Do not run the command separately** -- when using `-c`, `yolo` executes the command itself
   after approval. Running it again outside of `yolo` bypasses the safety check.
-- **Never use heredoc form** -- do not use `yolo -c "$(cat <<'EOF' ... EOF)"`. Tool parsers
-  match on `yolo -c` as the command prefix and are broken by multi-line heredoc syntax. Instead,
-  collapse multi-step commands onto a single line using `\n` as the separator within the
-  single-quoted string: `yolo -c 'step one\nstep two'`.
 - **Always use `-c` for compound expressions** -- any command containing `|`, `&&`, `||`, `;`,
   `>`, `<`, or backticks must use the `-c` flag. Without it, the shell parses those operators
   before `yolo` runs, bypassing the safety check entirely.

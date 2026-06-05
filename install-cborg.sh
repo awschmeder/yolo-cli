@@ -36,7 +36,8 @@ cp -f shell/yolo-setup.zsh "$SHELL_DIR/yolo-setup.zsh"
 echo -e "\033[32m\n[YOLO Installer] Installation completed successfully!\033[0m"
 echo -e "Files installed to: $INSTALL_DIR\n"
 
-echo -e "\033[33mTo finalize setup for your shell, append the following line to your profile:\033[0m"
+echo -e "\033[33mOptional EXPERIMENTAL interactive terminal hooks (most users should skip these;\033[0m"
+echo -e "\033[33magents call 'yolo -c' and do not need them). To enable, append to your profile:\033[0m"
 echo -e "\n\033[1mFor Bash (~/.bashrc or ~/.bash_profile):\033[0m"
 echo -e "  source \"\$HOME/.yolo/shell/yolo-setup.bash\""
 
