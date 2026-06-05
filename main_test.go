@@ -4,6 +4,44 @@ import (
 	"testing"
 )
 
+func TestResolveDelay(t *testing.T) {
+	tests := []struct {
+		name      string
+		flagVal   float64
+		envVal    string
+		wantSecs  float64
+		wantError bool
+	}{
+		{name: "zero both", flagVal: 0, envVal: "", wantSecs: 0},
+		{name: "valid float env", flagVal: 0, envVal: "0.5", wantSecs: 0.5},
+		{name: "valid int env", flagVal: 0, envVal: "5", wantSecs: 5.0},
+		{name: "non-numeric env", flagVal: 0, envVal: "abc", wantError: true},
+		{name: "negative env", flagVal: 0, envVal: "-1", wantError: true},
+		{name: "flag overrides env", flagVal: 2.0, envVal: "10", wantSecs: 2.0},
+		{name: "negative flag", flagVal: -1.0, envVal: "", wantError: true},
+		{name: "zero flag uses env", flagVal: 0, envVal: "3.5", wantSecs: 3.5},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := resolveDelay(tc.flagVal, tc.envVal)
+			if tc.wantError {
+				if err == nil {
+					t.Errorf("expected error, got nil (result=%g)", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if got != tc.wantSecs {
+				t.Errorf("expected %g, got %g", tc.wantSecs, got)
+			}
+		})
+	}
+}
+
 func TestComputeHash(t *testing.T) {
 	cmd := "rm -rf /"
 	hash := computeHash(cmd)

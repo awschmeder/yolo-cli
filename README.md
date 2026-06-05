@@ -66,6 +66,9 @@ yolo [flags] [command...]
   -s <file>     Scan a skill/agent definition file for embedded malicious instructions.
   --paranoid    Allow only strictly read-only commands. Shorthand: -p
   --dry-run     Check without executing; print the verdict and exit 0. Shorthand: -t
+  -d <secs>     Delay N seconds before submitting the command for safety check. Supports
+                fractions (e.g. 0.5). Skipped on -x bypass. Shorthand for --delay.
+  --delay <N>   Same as -d.
 ```
 
 ---
@@ -84,6 +87,7 @@ Set these in your shell profile or session:
 | `YOLO_PARANOID` | `1` to enable paranoid mode (same as `--paranoid`). |
 | `YOLO_ENVS` | Comma-separated env var **names** that activate the hook. Defaults to `YOLO_TEST,ROO_ACTIVE,ZOO_ACTIVE,CLAUDE_CODE,OPENCODE`. |
 | `YOLO_DEBUG` | `1` to print debug output to stderr. |
+| `YOLO_SLEEP` | Seconds to delay before the safety check. Supports fractions (e.g. `0.5`). Non-numeric or negative values are an error (fail closed). Overridden by `--delay`/`-d`. Skipped on `-x` bypass. |
 
 ---
 

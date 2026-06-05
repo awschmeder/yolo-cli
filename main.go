@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -196,6 +197,34 @@ func promptUserInteractive(reason string) bool {
 
 	input = strings.ToLower(strings.TrimSpace(input))
 	return input == "y" || input == "yes"
+}
+
+// resolveDelay returns the effective sleep duration in seconds. flagVal takes precedence
+// over envVal. Returns an error if envVal is non-numeric or negative.
+func resolveDelay(flagVal float64, envVal string) (float64, error) {
+	if flagVal != 0 {
+		if flagVal < 0 {
+			return 0, fmt.Errorf("invalid --delay value %g: must be non-negative", flagVal)
+		}
+		return flagVal, nil
+	}
+	if envVal == "" {
+		return 0, nil
+	}
+	n, err := strconv.ParseFloat(envVal, 64)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("invalid YOLO_SLEEP value %q: must be a non-negative number", envVal)
+	}
+	return n, nil
+}
+
+// sleepBeforeRun prints a notice to stderr and sleeps for delay seconds before
+// the command is submitted for safety evaluation, giving the user a chance to
+// abort with Ctrl-C.
+func sleepBeforeRun(cmd string, delay float64) {
+	debugLog("sleeping %g seconds before safety check", delay)
+	fmt.Fprintf(os.Stderr, "\033[33m[YOLO] Waiting %gs before check -- Ctrl-C to abort: %s\033[0m\n", delay, cmd)
+	time.Sleep(time.Duration(delay * float64(time.Second)))
 }
 
 // runCommand executes cmd via the system shell, wiring up stdio and returning
@@ -475,7 +504,19 @@ func main() {
 	// -s performs a deep skill/agent file safety scan using the SkillCheckSystemPrompt.
 	// Accepts a file path; exits 0 if safe, 1 if a threat is detected.
 	skillCheckFlag := flag.String("s", "", "File path to scan for embedded malicious instructions (SKILL.md, AGENTS.md, etc.)")
+	// -d / --delay introduces a pre-flight sleep before the safety check, giving the user a
+	// chance to abort with Ctrl-C. Supports fractional seconds (e.g. 0.5). Skipped on -x bypass.
+	delayFlag := flag.Float64("delay", 0, "Seconds to wait before submitting command for safety check (supports fractions, e.g. 0.5)")
+	flag.Float64Var(delayFlag, "d", 0, "Shorthand for --delay")
 	flag.Parse()
+
+	// Resolve effective sleep duration: flag takes precedence over YOLO_SLEEP env var.
+	// Non-numeric or negative values are an error -- fail closed.
+	sleepSecs, sleepErr := resolveDelay(*delayFlag, os.Getenv("YOLO_SLEEP"))
+	if sleepErr != nil {
+		fmt.Fprintf(os.Stderr, "[YOLO] %v\n", sleepErr)
+		os.Exit(1)
+	}
 
 	// Handle skill-check mode early -- independent of the command-check flow.
 	if *skillCheckFlag != "" {
@@ -545,7 +586,13 @@ func main() {
 		}
 	}
 
-	// 2. Local fast-path parsing for paranoid mode if enabled
+	// 2. Pre-flight sleep: fires after bypass check, before paranoid fast-path and LLM call.
+	// Skipped when -x bypass was used (allow() already exited above).
+	if sleepSecs > 0 {
+		sleepBeforeRun(commandToVerify, sleepSecs)
+	}
+
+	// 3. Local fast-path parsing for paranoid mode if enabled
 	if paranoid {
 		if isLocallySafeReadOnly(commandToVerify) {
 			debugLog("paranoid fast-path: locally safe read-only -- allowing")
@@ -553,7 +600,7 @@ func main() {
 		}
 	}
 
-	// 3. Contact OpenAI-compatible endpoint
+	// 4. Contact OpenAI-compatible endpoint
 	isSafe, reason, err := queryLLM(commandToVerify, paranoid)
 	if err != nil {
 		// Fail-safe: Block command on configuration or API errors
