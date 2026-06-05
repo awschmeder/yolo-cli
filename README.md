@@ -2,20 +2,20 @@
 
 ![yolo](assets/yolo-animated.gif)
 
-
-`yolo` is a lightweight Go tool for Bash and Zsh that routes each shell command through an
-OpenAI-compatible LLM endpoint for a pre-flight approve/deny check, replacing the need for static
-allow-list and regex-based command approval lists in coding agents.
-
 `yolo` is designed to combat operator fatigue and automation bias: when an AI agent generates a
 high volume of mostly-harmless commands, a human reviewing every one stops reading carefully and
 rubber-stamps them.
 
-`yolo` auto-approves and executes routine commands, but blocks the significant ones such as `rm -rf` and `git push --force` with a prompt that triggers the coding agent to elicit human approval.
+`yolo` auto-approves and executes routine commands, but blocks the significant ones such as `rm -rf` and `git push --force` with a prompt that triggers the coding agent to elicit human approval. In `--paranoid` mode it only allows read-only commands such as `git log`, `ls`, etc.
+
+## How it works
+
+`yolo` is a Go CLI tool for Bash and Zsh that routes each shell command through an
+OpenAI-compatible LLM endpoint for a pre-flight approve/deny check. The preferred model is `gpt-oss-safeguard-120b` or `-20b` variant, but falls back to `gpt-5.5-mini` on OpenAI API which does not provide this model.
 
 By using an LLM-based reasoning model `yolo` can understand the implications of deeply chained and
 context-dependent commands needed for infrastructure automation (jump hosts, `ssh` tunnels,
-`aws ssm` sessions, `kubectl exec`, nested `sh -c`).
+`aws ssm` sessions, `kubectl exec`, redirects, piped commands, etc.).
 
 **Not a security tool:** `yolo` is a convenience filter, not a security boundary. It relies on
 best-effort LLM judgment, trusts the caller to cooperate, and uses a keyless, easily-reproduced
