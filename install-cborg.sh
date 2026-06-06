@@ -1,48 +1,36 @@
 #!/usr/bin/env bash
 
 # YOLO Installation Script (CBORG variant)
-# Builds the Go binary, installs the CLI and shell hooks to ~/.yolo/, and prints
+# Builds the Go binary and installs it to ~/.local/bin, then prints
 # configuration guidance for users of the CBORG OpenAI-compatible endpoint.
 
 set -e
 
-# Define installation paths
-INSTALL_DIR="$HOME/.yolo"
-BIN_DIR="$INSTALL_DIR/bin"
-SHELL_DIR="$INSTALL_DIR/shell"
+BIN_DIR="$HOME/.local/bin"
 
 echo -e "\033[34m[YOLO Installer] Starting installation (CBORG)...\033[0m"
 
-# 1. Check dependencies
+# Check for Go
 if ! command -v go &> /dev/null; then
     echo -e "\033[31mError: Go is not installed or not in PATH.\033[0m"
     exit 1
 fi
 
-# 2. Create directory structures
+# Ensure the target bin directory exists
 mkdir -p "$BIN_DIR"
-mkdir -p "$SHELL_DIR"
 
-# 3. Build Go binary
-echo -e "\033[34m[YOLO Installer] Compiling Go utility...\033[0m"
-go build -o "$BIN_DIR/yolo" main.go
+# Build and install the binary
+echo -e "\033[34m[YOLO Installer] Compiling Go binary...\033[0m"
+go build -o "$BIN_DIR/yolo" .
 
-# 4. Copy Shell Hooks
-echo -e "\033[34m[YOLO Installer] Setting up shell hooks...\033[0m"
-cp -f shell/yolo-setup.bash "$SHELL_DIR/yolo-setup.bash"
-cp -f shell/yolo-setup.zsh "$SHELL_DIR/yolo-setup.zsh"
+echo -e "\033[32m\n[YOLO Installer] Installed: $BIN_DIR/yolo\033[0m"
 
-# 5. Output installation confirmation and usage details
-echo -e "\033[32m\n[YOLO Installer] Installation completed successfully!\033[0m"
-echo -e "Files installed to: $INSTALL_DIR\n"
-
-echo -e "\033[33mOptional EXPERIMENTAL interactive terminal hooks (most users should skip these;\033[0m"
-echo -e "\033[33magents call 'yolo -c' and do not need them). To enable, append to your profile:\033[0m"
-echo -e "\n\033[1mFor Bash (~/.bashrc or ~/.bash_profile):\033[0m"
-echo -e "  source \"\$HOME/.yolo/shell/yolo-setup.bash\""
-
-echo -e "\n\033[1mFor Zsh (~/.zshrc):\033[0m"
-echo -e "  source \"\$HOME/.yolo/shell/yolo-setup.zsh\""
+# Warn if the install directory is not on PATH
+if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+    echo -e "\033[33m\nWarning: $BIN_DIR is not in your PATH.\033[0m"
+    echo -e "Add the following line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
+    echo -e "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
 
 echo -e "\n\033[33mCBORG configuration (these are the built-in defaults; set only to override):\033[0m"
 echo -e "  export YOLO_BASE_URL=\"https://api.cborg.lbl.gov\""
