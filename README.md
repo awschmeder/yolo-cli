@@ -204,6 +204,18 @@ EOF
 
 This lets agents resolve the block automatically without user interaction.
 
+> **Note:** `yolo` does not automatically block execution of scripts with harmless-sounding
+> filenames (e.g., `check.sh`, `build.py`, `lint.sh`). A script named `check.sh` that contains
+> destructive operations will pass this heuristic unless its contents are submitted for inline
+> analysis. [`--paranoid` mode](#paranoid-mode---paranoid---p) uses best-effort blocking of
+> opaque script execution, but this is LLM-evaluated and not a hard guarantee.
+
+> **Warning:** `yolo` evaluates shell syntax and command semantics, but it cannot fully reason
+> about the consequences of executing compiled binaries, native extensions, or obfuscated
+> payloads. It does not perform CVE scanning, supply-chain provenance checks, or signature
+> verification. It is not a substitute for dependency auditing tools (e.g., `npm audit`,
+> `pip audit`, `trivy`) or a secure software supply-chain process.
+
 ### Package Installation Safety
 
 Package installation commands are high-value supply-chain attack vectors. `yolo` applies stricter
@@ -272,6 +284,13 @@ Restricts execution to verified read-only operations.
 - Commands with shell metacharacters (`>`, `<`, `|`, `;`, `&`, `$`, `` ` ``) are forwarded to the
   LLM under the paranoid policy.
 - Everything else is blocked.
+- Opaque script execution is blocked regardless of filename -- any script file whose contents
+  are not submitted inline (e.g., `bash deploy.sh`, `./run.sh`, `python migrate.py`) will be
+  rejected. The LLM will suggest re-submitting contents via heredoc for inline analysis.
+- If inline script contents are unusually long or use highly complex logic, paranoid mode treats
+  this as elevated risk: the LLM may be unable to fully trace all execution paths, and incomplete
+  analysis of a long script is itself a safety hazard. Paranoid mode will attempt to block such scripts with a
+  recommendation to review manually.
 
 ### Skill/Agent File Scanning (`-s`)
 
