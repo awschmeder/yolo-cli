@@ -109,6 +109,10 @@ To comply with safety checks, consider: [1] Use explicit package specifiers or l
 
 The intent of constructive BLOCK messages is to help agents adapt commands to align with safety policy. The intent of the "no workarounds" rule is to preserve the integrity of safety checks: agents should respect BLOCK decisions and defer to the user for final approval, not engineer ways around them.
 
+### Learning from Blocked Commands
+
+When a command is blocked by `yolo` and the user later approves a safer alternative, document the pattern in your own project's documentation and/or agent instruction harness (e.g. `AGENTS.md` file) so that future invocations can incorporate the safety-compliant approach from the start.
+
 ## Rules
 
 - **Always use `yolo -c` or heredoc** -- pass every command through `yolo` before execution,
