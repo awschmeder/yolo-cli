@@ -8,6 +8,28 @@ rubber-stamps them.
 
 `yolo` auto-approves and executes routine commands, but blocks the significant ones such as `rm -rf` and `git push --force` with a prompt that triggers the coding agent to elicit human approval. In `--paranoid` mode it only allows read-only commands such as `git log`, `ls`, etc.
 
+## Table of Contents
+
+- [How it works](#how-it-works)
+- [Quick Start](#quick-start)
+- [Integrating with a Coding Agent](#integrating-with-a-coding-agent)
+- [CLI Flags](#cli-flags)
+- [Configuration](#configuration)
+- [Command Modes & Examples](#command-modes--examples)
+  - [Exec Mode (`-c`)](#exec-mode--c)
+  - [Heredoc / Stdin Mode](#heredoc--stdin-mode)
+  - [Remote Script Installation (`curl | yolo`)](#remote-script-installation-curl--yolo)
+  - [Complex Script Analysis](#complex-script-analysis)
+  - [Package Installation Safety](#package-installation-safety)
+  - [Bypass Codes (`-x`)](#bypass-codes--x)
+  - [Paranoid Mode (`--paranoid` / `-p`)](#paranoid-mode---paranoid---p)
+  - [Skill/Agent File Scanning (`-s`)](#skillagent-file-scanning--s)
+  - [Dry-Run Mode (`--dry-run` / `-t`)](#dry-run-mode---dry-run---t)
+- [Interactive Terminal Activation (Experimental)](#interactive-terminal-activation-experimental)
+  - [Activation](#activation)
+
+---
+
 ## How it works
 
 `yolo` is a Go CLI tool for Bash and Zsh that routes each shell command through an
