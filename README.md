@@ -33,7 +33,7 @@ rubber-stamps them.
 ## How it works
 
 `yolo` is a Go CLI tool for Bash and Zsh that routes each shell command through an
-OpenAI-compatible LLM endpoint for a pre-flight approve/deny check. The preferred model is `gpt-oss-safeguard-120b` or `-20b` variant, but falls back to `gpt-5.5-mini` on OpenAI API which does not provide this model.
+OpenAI-compatible LLM endpoint for a pre-flight approve/deny check. The preferred model is `gpt-oss-safeguard-120b` or `-20b` variant, but falls back to `gpt-5.4-mini` on OpenAI API which does not provide this model.
 
 By using an LLM-based reasoning model `yolo` can understand the implications of deeply chained and
 context-dependent commands needed for infrastructure automation (jump hosts, `ssh` tunnels,
