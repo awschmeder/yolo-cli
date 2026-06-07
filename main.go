@@ -16,6 +16,9 @@ import (
 	"time"
 )
 
+// Version of yolo
+const Version = "0.1.0"
+
 // Policy and System Prompts
 const (
 	NormalSystemPrompt = `You are a command safety checker. Analyze the following shell command or script.
@@ -562,7 +565,15 @@ func main() {
 	// integrations use this so that the interactive shell runs the command itself after yolo exits 0.
 	checkOnlyPtr := flag.Bool("check", false, "Check the command without executing it (shell hook mode)")
 	flag.BoolVar(checkOnlyPtr, "n", false, "Shorthand for --check")
+	// --version prints the version and exits
+	versionPtr := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
+
+	// Handle version flag early
+	if *versionPtr {
+		fmt.Printf("yolo version %s\n", Version)
+		os.Exit(0)
+	}
 
 	// Resolve effective sleep duration: flag takes precedence over YOLO_SLEEP env var.
 	// Non-numeric or negative values are an error -- fail closed.

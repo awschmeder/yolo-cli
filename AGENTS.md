@@ -26,6 +26,19 @@ All runtime failures must fail-safe. If the model or configuration checks error 
 
 ---
 
+## Versioning
+
+The version is defined in [`main.go`](main.go) as the `Version` constant and exposed via `yolo --version` / `yolo -v`.
+
+**Version Increment Policy** (triggered on `sendit`):
+- **Micro version** (e.g., `0.1.0` -> `0.1.1`): For small updates, bug fixes, documentation improvements, prompt refinements, or non-breaking enhancements
+- **Minor version** (e.g., `0.1.0` -> `0.2.0`): For significant new features, architectural changes, new flags, or changes to safety policy
+- **Major version** (e.g., `0.1.0` -> `1.0.0`): Reserved for breaking changes, API redesigns, or major stability milestones
+
+When committing via `sendit`, increment the version in [`main.go`](main.go) as part of the commit if the changes justify it. Start with micro increments; reserve minor/major bumps for more substantial work.
+
+---
+
 ## Coding Standards
 
 - **Error Handling**: Use direct, explicit Go error checks. Propagate system errors to stderr for diagnostic transparency.
