@@ -1,6 +1,6 @@
-# Agent Shell Safety Instructions
+# yolo: Shell Tool Preflight Safety Checker
 
-This project uses `yolo`, a pre-flight shell safety checker. Before executing any shell command,
+This user uses `yolo`, a pre-flight shell safety checker. Before executing any shell command,
 you must submit the full command expression to `yolo` for safety evaluation. When invoked with
 `-c`, `yolo` is responsible for both checking **and** running the command -- do not execute the
 command separately.
@@ -20,7 +20,15 @@ The `-c` flag mirrors the `sh -c` convention and is the preferred form for all c
 ensures that shell operators (`|`, `&&`, `;`, `>`, etc.) are passed to `yolo` as part of the
 command string rather than being interpreted by the shell before `yolo` can evaluate them.
 
-#### Examples
+For multi-line or complex expressions, use a heredoc instead:
+
+```bash
+yolo << EOF
+<your full command expression here>
+EOF
+```
+
+### Examples
 
 ```bash
 # Simple command
@@ -37,6 +45,12 @@ yolo -c 'ssh mybox rm -rf /tmp/old-data'
 
 # Semicolon-separated sequence
 yolo -c 'mkdir -p ./out; cp build/* ./out/'
+
+# Multi-line heredoc
+yolo << EOF
+find /tmp -name "*.log" -mtime +7 \
+  | xargs rm -f
+EOF
 ```
 
 ### What Happens When a Command Is Blocked
@@ -79,15 +93,15 @@ The bypass hash is computed from the **exact command string** that was blocked. 
 
 ## Rules
 
-- **Always use `yolo -c`** -- pass every command through `yolo -c '...'` before execution,
+- **Always use `yolo -c` or heredoc** -- pass every command through `yolo` before execution,
   regardless of how safe the command appears. This includes read-only commands such as
   `find`, `ls`, `cat`, `grep`, `git status`, `git log`, `git diff`, and any other CLI tool.
   There are no exceptions based on command type or perceived safety.
-- **Do not run the command separately** -- when using `-c`, `yolo` executes the command itself
-  after approval. Running it again outside of `yolo` bypasses the safety check.
-- **Always use `-c` for compound expressions** -- any command containing `|`, `&&`, `||`, `;`,
-  `>`, `<`, or backticks must use the `-c` flag. Without it, the shell parses those operators
-  before `yolo` runs, bypassing the safety check entirely.
+- **Do not run the command separately** -- `yolo` executes the command itself after approval.
+  Running it again outside of `yolo` bypasses the safety check.
+- **Keep compound expressions together** -- any command containing `|`, `&&`, `||`, `;`, `>`,
+  `<`, or backticks must be passed as a single `-c` string or heredoc body. Splitting them into
+  separate `yolo` calls to make each look simpler is not acceptable.
 - **Use `-x` for bypass codes** -- when re-running a blocked command with user approval, supply
   the hash via `yolo -x <hash> -c '<cmd>'`. Do not embed the `YOLO=<hash>` prefix inside the
   command string.
@@ -97,9 +111,3 @@ The bypass hash is computed from the **exact command string** that was blocked. 
   before re-execution with the `-x` bypass flag.
 - **Treat exit code 1 as a hard stop** -- a non-zero exit from `yolo` means the command did not
   run. Do not assume it executed or proceed as if it did.
-- **Do not split compound commands to avoid review** -- breaking `cmd1 && cmd2` into two
-  separate `yolo -c` calls to make each look simpler is not acceptable. Submit the full intended
-  expression as a single invocation so the combined effect is evaluated.
----
-
-

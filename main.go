@@ -227,9 +227,31 @@ func sleepBeforeRun(cmd string, delay float64) {
 	time.Sleep(time.Duration(delay * float64(time.Second)))
 }
 
+// readStdin reads all of stdin and returns the trimmed content. It is used to
+// support heredoc invocations (yolo << EOF ... EOF) where the command body is
+// delivered via stdin rather than the -c flag.
+func readStdin() (string, error) {
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return "", fmt.Errorf("reading stdin: %w", err)
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+// stdinIsTTY reports whether os.Stdin is an interactive terminal. When stdin is
+// a pipe or a heredoc redirection it returns false, signalling that the command
+// body should be read from stdin.
+func stdinIsTTY() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) != 0
+}
+
 // runCommand executes cmd via the system shell, wiring up stdio and returning
-// the process exit code. Used when yolo is invoked with -c so it is responsible
-// for both checking and running the command.
+// the process exit code. Used when yolo is invoked with -c (or via heredoc) so
+// it is responsible for both checking and running the command.
 func runCommand(cmd string) int {
 	sh := os.Getenv("SHELL")
 	if sh == "" {
@@ -508,6 +530,10 @@ func main() {
 	// chance to abort with Ctrl-C. Supports fractional seconds (e.g. 0.5). Skipped on -x bypass.
 	delayFlag := flag.Float64("delay", 0, "Seconds to wait before submitting command for safety check (supports fractions, e.g. 0.5)")
 	flag.Float64Var(delayFlag, "d", 0, "Shorthand for --delay")
+	// --check / -n performs the safety check but does not execute the command. The shell hook
+	// integrations use this so that the interactive shell runs the command itself after yolo exits 0.
+	checkOnlyPtr := flag.Bool("check", false, "Check the command without executing it (shell hook mode)")
+	flag.BoolVar(checkOnlyPtr, "n", false, "Shorthand for --check")
 	flag.Parse()
 
 	// Resolve effective sleep duration: flag takes precedence over YOLO_SLEEP env var.
@@ -535,21 +561,38 @@ func main() {
 
 	paranoid := *paranoidPtr || os.Getenv("YOLO_PARANOID") == "1"
 	dryRun := *dryRunPtr
+	checkOnly := *checkOnlyPtr
 
-	// execMode is true when -c was supplied and dry-run is not active; in this mode yolo is
-	// responsible for both checking and executing the command after a successful safety check.
-	execMode := *cmdFlag != "" && !dryRun
-
+	// Resolve the command to check. Mirrors the sh(1) interface:
+	//   yolo -c 'cmd'    -- check and execute the command
+	//   yolo << EOF      -- check and execute the command (heredoc form)
+	//        cmd
+	//   EOF
+	//
+	// execMode is true when a command is provided without --dry-run or --check.
+	// --check is used by the shell hook integrations so the interactive shell
+	// runs the command itself; yolo only gates it.
 	var commandToVerify string
-	if execMode {
+	execMode := false
+
+	switch {
+	case *cmdFlag != "":
 		commandToVerify = strings.TrimSpace(*cmdFlag)
-	} else {
-		args := flag.Args()
-		if len(args) == 0 {
-			// Nothing to verify, allow empty execution
-			os.Exit(0)
+		execMode = !dryRun && !checkOnly
+
+	case !stdinIsTTY():
+		// Heredoc or piped input: read the command body from stdin.
+		stdinCmd, err := readStdin()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[YOLO] failed to read stdin: %v\n", err)
+			os.Exit(1)
 		}
-		commandToVerify = strings.Join(args, " ")
+		commandToVerify = stdinCmd
+		execMode = !dryRun && !checkOnly
+
+	default:
+		// No command source provided; nothing to check.
+		os.Exit(0)
 	}
 
 	if commandToVerify == "" {

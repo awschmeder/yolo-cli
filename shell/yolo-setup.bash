@@ -28,8 +28,9 @@ _yolo_preexec_trap() {
         return 0
     fi
 
-    # Pass the command string to yolo. Env vars like YOLO are inherited.
-    "$HOME/.yolo/bin/yolo" "$BASH_COMMAND"
+    # Feed the command to yolo on stdin with --check so yolo gates but does not
+    # exec -- the shell's DEBUG trap mechanism runs the command itself on exit 0.
+    "$HOME/.yolo/bin/yolo" --check <<< "$BASH_COMMAND"
     local exit_code=$?
 
     if [ $exit_code -ne 0 ]; then

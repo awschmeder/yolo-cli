@@ -37,7 +37,9 @@ _yolo_accept_line() {
     # terminal back to the calling process.
     zle -I
 
-    "$HOME/.yolo/bin/yolo" "$cmd"
+    # Feed the command to yolo on stdin with --check so yolo gates but does not
+    # exec -- zle .accept-line runs the command itself on exit 0.
+    "$HOME/.yolo/bin/yolo" --check <<< "$cmd"
     local exit_code=$?
 
     if [ $exit_code -ne 0 ]; then

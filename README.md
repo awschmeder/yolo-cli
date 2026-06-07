@@ -58,17 +58,24 @@ commands the policy flags. For all projects, paste into your global agent rules 
 ## CLI Flags
 
 ```
-yolo [flags] [command...]
+yolo [flags]
 
   -c <expr>     Check and execute a command expression. Preferred for all agent use and
-                compound commands (pipes, chains, redirects, heredocs).
+                compound commands (pipes, chains, redirects).
   -x <hash>     6-char hex bypass code to authorize a previously blocked command.
   -s <file>     Scan a skill/agent definition file for embedded malicious instructions.
   --paranoid    Allow only strictly read-only commands. Shorthand: -p
-  --dry-run     Check without executing; print the verdict and exit 0. Shorthand: -t
+  --dry-run     Check without executing; print verdict to stderr, always exit 0. Shorthand: -t
+  --check       Check without executing; exit 0 (allow) or 1 (block), no output on allow.
+                Used by shell hook integrations. Shorthand: -n
   -d <secs>     Delay N seconds before submitting the command for safety check. Supports
                 fractions (e.g. 0.5). Skipped on -x bypass. Shorthand for --delay.
   --delay <N>   Same as -d.
+
+Stdin / heredoc mode (yolo reads the command from stdin when stdin is not a terminal):
+  yolo << EOF
+  <command>
+  EOF
 ```
 
 ---
@@ -93,7 +100,7 @@ Set these in your shell profile or session:
 
 ## Command Modes & Examples
 
-### Exec Mode Examples (`-c`)
+### Exec Mode (`-c`)
 
 `yolo -c` checks the command and, if approved, runs it directly in the current shell. This is the
 required form for agents and any compound expression. Do not run the command again afterward.
@@ -103,8 +110,32 @@ yolo -c 'rm -rf ./dist'
 yolo -c 'git add . && git commit -m "fix: update config"'
 yolo -c 'cat files.txt | xargs rm -f'
 
-# Multi-line commands work directly; pass them as a single quoted string
+# Multi-line commands: pass as a single quoted string
 yolo -c 'find /tmp -name "*.log" -mtime +7 | xargs rm -f'
+```
+
+### Heredoc / Stdin Mode
+
+When stdin is not an interactive terminal, `yolo` reads the command body from stdin and, if
+approved, executes it. This mirrors `sh` behavior: `sh << EOF`. Multi-line bodies are supported;
+the entire block is submitted to the LLM as a single expression.
+
+```bash
+# Heredoc -- check and exec
+yolo << EOF
+find /tmp -name "*.log" -mtime +7 | xargs rm -f
+EOF
+
+# Herestring (bash/zsh) -- check and exec
+yolo <<< 'rm -rf ./dist'
+
+# Pipe -- check and exec
+echo 'git status' | yolo
+
+# Gate-only (shell hook use): check, exit 0/1, do not exec
+yolo --check << EOF
+find /tmp -name "*.log" -mtime +7 | xargs rm -f
+EOF
 ```
 
 ### Bypass Codes (`-x`)

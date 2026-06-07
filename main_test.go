@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 )
 
@@ -107,6 +108,94 @@ func TestVerifyBypassMultiline(t *testing.T) {
 	}
 	if okStale {
 		t.Errorf("Expected stale-hash multi-line bypass to be invalid")
+	}
+}
+
+func TestStdinIsTTY(t *testing.T) {
+	// In a test process stdin is typically a pipe/file, not a TTY.
+	// We can't guarantee the test runner's stdin state, so just verify the
+	// function returns a bool without panicking.
+	result := stdinIsTTY()
+	// result is false in most CI/test environments; true in interactive terminals.
+	_ = result
+}
+
+func TestReadStdin(t *testing.T) {
+	// Swap os.Stdin with a pipe so readStdin() sees non-TTY input.
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdin = r
+
+	input := "echo hello world\n"
+	if _, err := w.WriteString(input); err != nil {
+		t.Fatalf("write to pipe: %v", err)
+	}
+	w.Close()
+
+	got, err := readStdin()
+	os.Stdin = origStdin
+	r.Close()
+
+	if err != nil {
+		t.Fatalf("readStdin returned error: %v", err)
+	}
+	want := "echo hello world"
+	if got != want {
+		t.Errorf("readStdin: got %q, want %q", got, want)
+	}
+}
+
+func TestReadStdinMultiline(t *testing.T) {
+	// Heredoc body may contain multiple lines; readStdin must preserve them.
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdin = r
+
+	input := "find /tmp -name '*.log' -mtime +7\nxargs rm -f\n"
+	if _, err := w.WriteString(input); err != nil {
+		t.Fatalf("write to pipe: %v", err)
+	}
+	w.Close()
+
+	got, err := readStdin()
+	os.Stdin = origStdin
+	r.Close()
+
+	if err != nil {
+		t.Fatalf("readStdin returned error: %v", err)
+	}
+	// TrimSpace removes the trailing newline; interior newlines are preserved.
+	want := "find /tmp -name '*.log' -mtime +7\nxargs rm -f"
+	if got != want {
+		t.Errorf("readStdin multiline: got %q, want %q", got, want)
+	}
+}
+
+func TestReadStdinEmpty(t *testing.T) {
+	// EOF with no content (e.g. empty heredoc) should return an empty string.
+	origStdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stdin = r
+	w.Close() // immediate EOF
+
+	got, err := readStdin()
+	os.Stdin = origStdin
+	r.Close()
+
+	if err != nil {
+		t.Fatalf("readStdin returned error on empty input: %v", err)
+	}
+	if got != "" {
+		t.Errorf("readStdin empty: got %q, want \"\"", got)
 	}
 }
 
