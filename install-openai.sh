@@ -21,7 +21,9 @@ mkdir -p "$BIN_DIR"
 
 # Build and install the binary
 echo -e "\033[34m[YOLO Installer] Compiling Go binary...\033[0m"
-go build -o "$BIN_DIR/yolo" .
+BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+BUILD_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+go build -ldflags "-X main.BuildDate=$BUILD_DATE -X main.BuildCommit=$BUILD_COMMIT" -o "$BIN_DIR/yolo" .
 
 echo -e "\033[32m\n[YOLO Installer] Installed: $BIN_DIR/yolo\033[0m"
 

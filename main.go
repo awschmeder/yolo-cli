@@ -11,13 +11,21 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 // Version of yolo
-const Version = "0.1.0"
+const Version = "0.1.1"
+
+// Build metadata -- injected at compile time via -ldflags.
+// Defaults to "dev" when built without ldflags (e.g. go run).
+var (
+	BuildDate   = "dev"
+	BuildCommit = "dev"
+)
 
 // commandAnalysisCore is the shared analysis body used by both normal and paranoid prompts.
 // Paranoid mode appends paranoidOverride to tighten the verdict criteria to read-only only.
@@ -611,6 +619,9 @@ func main() {
 	// Handle version flag early
 	if *versionPtr {
 		fmt.Printf("yolo version %s\n", Version)
+		fmt.Printf("  commit:  %s\n", BuildCommit)
+		fmt.Printf("  built:   %s\n", BuildDate)
+		fmt.Printf("  runtime: %s\n", runtime.Version())
 		os.Exit(0)
 	}
 
