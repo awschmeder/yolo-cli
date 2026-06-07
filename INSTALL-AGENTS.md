@@ -91,6 +91,24 @@ The bypass hash is computed from the **exact command string** that was blocked. 
   ```
 - A modified command requires a fresh round of user approval before using the new hash.
 
+### Interpreting and Responding to BLOCK Messages
+
+When `yolo` blocks a command, the BLOCK message may include constructive suggestions for how to modify the command to comply with safety checks. For example:
+
+```
+[YOLO BLOCKED] Reason: Bare npm install without explicit package specifiers or lock file is unsafe.
+To comply with safety checks, consider: [1] Use explicit package specifiers or lock files, [2] Follow with an audit command (npm audit, etc.) to scan for known vulnerabilities before deployment.
+```
+
+**How to respond:**
+
+1. **Apply only user-aligned suggestions** -- If the BLOCK message includes suggestions (e.g., adding `npm audit`, using `--no-save`, specifying packages explicitly), and these align with the user's original intent and instructions, incorporate them into a revised command.
+2. **Never invent workarounds** -- Do not attempt alternative approaches, circumvention techniques, or creative reinterpretations that were not explicitly provided by the user's original instructions or `yolo`'s constructive suggestions. A BLOCK is a safety boundary, not a puzzle to solve around.
+3. **Re-submit the revised command** -- After modifying the command based on `yolo`'s suggestions, submit the new command to `yolo` for re-evaluation. It will receive a new hash code if blocked again.
+4. **Report the block to the user if all suggestions fail** -- If the command remains blocked after applying all suggested modifications, inform the user and ask for explicit approval via the `-x` bypass mechanism.
+
+The intent of constructive BLOCK messages is to help agents adapt commands to align with safety policy. The intent of the "no workarounds" rule is to preserve the integrity of safety checks: agents should respect BLOCK decisions and defer to the user for final approval, not engineer ways around them.
+
 ## Rules
 
 - **Always use `yolo -c` or heredoc** -- pass every command through `yolo` before execution,
