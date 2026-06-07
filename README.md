@@ -71,11 +71,14 @@ yolo [flags]
   -d <secs>     Delay N seconds before submitting the command for safety check. Supports
                 fractions (e.g. 0.5). Skipped on -x bypass. Shorthand for --delay.
   --delay <N>   Same as -d.
+  --version     Print version and exit.
 
-Stdin / heredoc mode (yolo reads the command from stdin when stdin is not a terminal):
-  yolo << EOF
+Stdin / pipe mode (yolo reads the command or script from stdin when stdin is not a terminal):
+  yolo << EOF          # heredoc: check and exec a command block
   <command>
   EOF
+
+  curl <url> | yolo    # pipe: check and exec a remote install script
 ```
 
 ---
@@ -137,6 +140,86 @@ yolo --check << EOF
 find /tmp -name "*.log" -mtime +7 | xargs rm -f
 EOF
 ```
+
+### Remote Script Installation (`curl | yolo`)
+
+`yolo` is a drop-in replacement for `bash` in the common `curl <url> | bash` install pattern.
+Pipe the remote script into `yolo` instead -- the full script body is submitted to the LLM for
+a safety check before any of it executes. If it looks fine, `yolo` runs it. If it looks
+problematic, `yolo` blocks it and prints the reason.
+
+```bash
+# Instead of:
+curl -fsSL https://example.com/install.sh | bash
+
+# Use:
+curl -fsSL https://example.com/install.sh | yolo
+```
+
+The entire script is evaluated as a single unit, so multi-step scripts (those that set variables,
+define functions, and then call them) are analyzed in full context.
+
+As with all `yolo` usage, this is best-effort -- a guard against accidentally running something
+obviously dangerous, not a vulnerability scanner or security guarantee.
+
+### Complex Script Analysis
+
+When a multi-line script or compound pipeline is submitted, `yolo` traces data flow across all
+steps rather than evaluating each command in isolation. A pipeline that collects system data in
+one step and transmits it to a remote host in a later step is flagged even if no individual
+command looks dangerous.
+
+When executing a local script file with a high-impact name (e.g., `bash deploy.sh`,
+`./migrate.sh`), `yolo` may block and suggest re-submitting the script contents via heredoc for
+full inspection:
+
+```bash
+# If 'yolo -c './deploy.sh'' is blocked, re-submit contents for analysis:
+yolo << EOF
+$(cat ./deploy.sh)
+EOF
+```
+
+This lets agents resolve the block automatically without user interaction.
+
+### Package Installation Safety
+
+Package installation commands are high-value supply-chain attack vectors. `yolo` applies stricter
+scrutiny to `npm install`, `pip install`, `apt install`, and similar commands.
+
+Bare installs without explicit package specifiers are blocked. When blocked, `yolo` includes
+constructive suggestions in the BLOCK message so agents can self-correct and retry:
+
+```bash
+# Blocked -- bare install is opaque:
+npm install
+
+# Compliant -- explicit specifier + audit:
+npm install lodash && npm audit
+```
+
+```bash
+# Blocked -- bare npm install (lifecycle scripts execute arbitrary code):
+npm install
+
+# Compliant -- suppress lifecycle scripts, then audit:
+npm install lodash --ignore-scripts && npm audit
+# Or use a lock file:
+npm ci --ignore-scripts && npm audit
+```
+
+```bash
+# Blocked -- bare pip install (setup.py and .pth files execute arbitrary code):
+pip install
+
+# Compliant -- hash-verified lock file, no build isolation, then audit:
+pip install --require-hashes --no-build-isolation -r requirements.txt && pip audit
+```
+
+> **Note:** Both `npm install` and `pip install` execute arbitrary code on the host at install
+> time -- npm via `preinstall`/`postinstall` lifecycle scripts, pip via `.pth` files and
+> `setup.py`. Use `--ignore-scripts` (npm) and `--require-hashes` (pip) for higher-assurance
+> environments.
 
 ### Bypass Codes (`-x`)
 
