@@ -70,10 +70,26 @@ instruction block.
  - **OpenAI Codex / generic agents**: project `AGENTS.md`
  - **Claude Code**: project `CLAUDE.md` (or `~/.claude/CLAUDE.md` for all projects)
  - **Cursor**: a rule under `.cursor/rules/`
+ - **ZooCode**: `.roo/rules/rules.md`
  - **Other agents**: that agent's global or project-level rules insertion point
 
-Once integrated, `yolo` can be the sole auto-approved command -- you are prompted only for the
-commands the policy flags. For all projects, paste into your global agent rules file instead.
+2. **Enable auto-execution of `yolo`
+
+**Claude Code**: in `~/.claude/settings.json`:
+
+   ```json
+   {
+       "permissions": {
+           "allow": [
+               "Bash(yolo *)"
+           ]
+       }
+   }
+   ```
+
+**ZooCode/RooCode**: Ask agent to run `sleep 10` then enable the bare `yolo` pattern in the drop down; enable Execute. 
+
+**Other Agents**: Consult documentation.
 
 ---
 
